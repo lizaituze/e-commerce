@@ -29,7 +29,7 @@ export default function ProductsPage() {
     ...(categoryId && { categoryId }),
   };
 
-  const { data: products, isLoading, isError, error, isFetching } = useProducts(filters);
+  const { data: products, isLoading, isError, error, isFetching, isPlaceholderData } = useProducts(filters);
   const { data: categories } = useCategories();
 
   return (
@@ -61,29 +61,31 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isLoading || (isFetching && !isPlaceholderData) ? (
         <Spinner />
       ) : isError ? (
         <ErrorMessage message={error.message} />
-      ) : products?.length === 0 ? (
-        <div className="flex flex-col items-center py-20 gap-3">
-          <span className="text-4xl">🔍</span>
-          <p className="text-gray-500">No products found. Try a different search.</p>
-        </div>
       ) : (
         <>
-          {isFetching && !isLoading && (
+          {isPlaceholderData && isFetching && (
             <p className="text-sm text-indigo-500 mb-3 animate-pulse">Updating…</p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {products.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
+          {products?.length === 0 ? (
+            <div className="flex flex-col items-center py-20 gap-3">
+              <span className="text-4xl">🔍</span>
+              <p className="text-gray-500">No products found. Try a different search.</p>
+            </div>
+          ) : (
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 transition-opacity ${isPlaceholderData ? 'opacity-50' : 'opacity-100'}`}>
+              {products?.map((p) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          )}
           {/* Pagination */}
           <div className="flex items-center justify-center gap-4 mt-10">
             <Button
               variant="secondary"
               onClick={() => setOffset((o) => Math.max(0, o - LIMIT))}
-              disabled={offset === 0}
+              disabled={offset === 0 || isFetching}
             >
               ← Previous
             </Button>
@@ -91,7 +93,7 @@ export default function ProductsPage() {
             <Button
               variant="secondary"
               onClick={() => setOffset((o) => o + LIMIT)}
-              disabled={products.length < LIMIT}
+              disabled={(products?.length ?? 0) < LIMIT || isFetching}
             >
               Next →
             </Button>
